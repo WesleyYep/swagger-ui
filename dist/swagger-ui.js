@@ -680,11 +680,11 @@ this["Handlebars"]["templates"]["sidebar_item"] = Handlebars.template({"compiler
     + "\n";
 },"useData":true});
 this["Handlebars"]["templates"]["signature"] = Handlebars.template({"1":function(depth0,helpers,partials,data) {
-  var stack1, helper, functionType="function", helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression, buffer = "    <h4 class=\"schema-title collapsed\" data-control data-toggle=\"collapse\"\n        data-target=\"#schema-"
+  var stack1, helper, functionType="function", helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression, buffer = "    <h4 class=\"schema-title\" data-control data-toggle=\"collapse\"\n        data-target=\"#schema-"
     + escapeExpression(((helper = (helper = helpers.id || (depth0 != null ? depth0.id : depth0)) != null ? helper : helperMissing),(typeof helper === functionType ? helper.call(depth0, {"name":"id","hash":{},"data":data}) : helper)))
     + "\">"
     + escapeExpression(((helper = (helper = helpers.type || (depth0 != null ? depth0.type : depth0)) != null ? helper : helperMissing),(typeof helper === functionType ? helper.call(depth0, {"name":"type","hash":{},"data":data}) : helper)))
-    + " Schema</h4>\n    <div data-content class=\"collapse\" id=\"schema-"
+    + " Schema</h4>\n    <div data-content class=\"collapse in\" id=\"schema-"
     + escapeExpression(((helper = (helper = helpers.id || (depth0 != null ? depth0.id : depth0)) != null ? helper : helperMissing),(typeof helper === functionType ? helper.call(depth0, {"name":"id","hash":{},"data":data}) : helper)))
     + "\">\n        <div class=\"description\">\n            ";
   stack1 = ((helper = (helper = helpers.signature || (depth0 != null ? depth0.signature : depth0)) != null ? helper : helperMissing),(typeof helper === functionType ? helper.call(depth0, {"name":"signature","hash":{},"data":data}) : helper));
@@ -21229,6 +21229,7 @@ SwaggerUi.Views.MainView = Backbone.View.extend({
     }
   },
   initialize: function (opts) {
+    console.log(this.model.info);
     var sorterOption, sorterFn, key, value;
     opts = opts || {};
 
@@ -21322,6 +21323,18 @@ SwaggerUi.Views.MainView = Backbone.View.extend({
     // Render the outer container for resources
     $(this.el).html(Handlebars.templates.main(this.model));
 
+    //render the description as a resource
+    // var resource = this.model.apisArray[0];
+    // resource.id = "Description";
+    // resource.name = "Description";
+    // resource.path = "Description";
+    // resource.tag = "Description";
+    // resource.nmbr = 0;
+    // resource.operationsArray[0].summary = "Description";
+    // resource.operationsArray[0].description = "test test";
+    // this.addResource(resource, this.model.auths);
+    // this.addSidebarHeader(resource, 0);
+
     // Render each resource
 
     var resources = {};
@@ -21335,10 +21348,9 @@ SwaggerUi.Views.MainView = Backbone.View.extend({
       }
       resource.id = id;
       resources[id] = resource;
-      resource.nmbr = i;
-
+      resource.nmbr = i+1;
       this.addResource(resource, this.model.auths);
-      this.addSidebarHeader(resource, i);
+      this.addSidebarHeader(resource, i+1);
     }
 
     $('.propWrap').hover(function onHover() {
@@ -21357,6 +21369,8 @@ SwaggerUi.Views.MainView = Backbone.View.extend({
   },
 
   addResource: function (resource, auths) {
+ //   console.log(resource);
+
     // Render a resource and add it to resources li
     resource.id = resource.id.replace(/\s/g, '_');
 
