@@ -617,11 +617,11 @@
     }
 }
 
-@media (min-width: 992px) {
+/*@media (min-width: 992px) {
     .swagger-section .token-generator.hide {
         display: block !important
     }
-}
+}*/
 
 .swagger-section .token-generator .tg-link {
     color: #fff;
@@ -1086,7 +1086,7 @@
 
 @media (min-width: 992px) {
     .swagger-section .sticky-nav.fixed {
-        width: 290px;
+        width: 400px;
         height: 100%;
         overflow-y: auto
     }
@@ -1464,7 +1464,7 @@ body {
 
 @media (min-width: 992px) {
     .swagger-section #swagger_sidebar {
-        width: 290px;
+        width: 400px;
         position: absolute;
         left: 0;
         top: 0;
@@ -1483,7 +1483,7 @@ body {
 @media (min-width: 992px) {
     .swagger-section #resources_container {
         width: 100%;
-        padding-left: 290px
+        padding-left: 400px;
     }
 }
 
