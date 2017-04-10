@@ -129,9 +129,9 @@ SwaggerUi.Views.MainView = Backbone.View.extend({
     // resource.operationsArray[0].description = "test test";
     // this.addResource(resource, this.model.auths);
     // this.addSidebarHeader(resource, 0);
-
+ 
     // Render each resource
-
+    
     var resources = {};
     var counter = 0;
     for (var i = 0; i < this.model.apisArray.length; i++) {

@@ -1,0 +1,669 @@
+swagger: 2.0
+info:
+  title: Macquarie Connect API Guide
+  description: >
+    <br />
+    Macquarie Connect makes it easy for third party applcations to access a users Macquarie account on their behalf.
+    <br />
+    <br />
+    All production API requests are made to:
+    <br />
+    https://lab.api.macquarie.io/connect/{version}
+    <br />
+    <br />
+    The current version of the API is v1. Backwards incompatible changes will result in a version bump.
+    <br />
+    <br />
+    The APIs mentioned below all require OAuth 2.0 credentials. In order to start using the below APIs, the following code snippet will need to be implemented into the third party
+    aplication: 
+    <br/ >
+    <br />
+    &ltinput type="button" value="Connect With Macquarie" onclick="window.location.href='https://lab.api.macquarie.io/connect/v1/user-interface/?client_id={client_id}'"/ &gt
+    <br/ >
+    <br />
+    This button will allow a third party application user to navigate to Macquarie, login using their Macquarie credentials, and delegate authorization for the third party application to 
+    access their Macquarie accounts on their behalf. Once this is done, an authorization code will be returned to the third party application to use in exchange for an access token. 
+    Refer to the section titled "Authentication" to get started. This API guide assumes the user has already delegated authority to a third party application.
+    
+    ## Errors
+
+    There are various conditions in which the API may return an error. The third party application can then parse the error in order to determine the next step for the user.
+
+    ### Structure
+
+    Error responses will have a consistently formed JSON body. The following defines the structure of error responses:
+
+      |Parameter           |Type  |Description                      |
+      |--------------------|------|---------------------------------|
+      |errors              |array |A list of errors.                |
+      |errors[].status     |number|HTTP response code.              |
+      |errors[].code       |string|Machine-readable error code.     |
+      |errors[].description|string|Human-readable error message.    |
+
+    ### Sample Error
+
+        {
+          "errors":[
+            {
+              "status": 400,
+              "code": "bad_request",
+              "description": "Either the requested URL is invalid or a mandatory parameter is missing from the request."
+            }
+          ]
+        }
+
+    ### Shared HTTP Error Codes
+
+    The below table displays a list of generic errors that can be seen across all APIs:
+
+      |HTTP Code|Code             |Description                                                                                |
+      |---------|-----------------|-------------------------------------------------------------------------------------------|
+      |400      |bad_request      |Either the requested URL is invalid or a mandatory parameter is missing from the request.  |
+      |401      |unauthorized     |Invalid access token.                                                                      |
+      |401      |unauthorized     |Access token expired.                                                                      |
+      |401      |unauthorized     |Client authentication failed, due to missing or invalid client credentials.                |
+      |401      |unauthorized     |Insufficient scope.                                                                        |
+      |429      |too_many_requests|Too many requests have been sent within a given timeframe.                                 |
+      |500      |internal_error   |An internal server error has occurred.                                                     |
+version: 1.0.0
+host: lab.api.macquarie.io
+schemes:
+  - https
+basePath: /connect/v1
+produces:
+  - application/json
+paths:
+  /token:
+    get:
+      summary: Third Party Application Entrance Interface
+      description: >
+        Defines the third party application entrance point. The third party must create and expose an API that accepts the request documented below. The API will be responsible
+        for receiving a redirect from Macquarie, therefore the endpoint address must be provided to Macquarie during the third party onboarding process. The API will receive a request 
+        from Macquarie that contains an authorization code in a query paramter named "code", which should be extracted and used in a call out to obtain an access token from the Macquarie 
+        authentication service. Refer to the "Get An Access Token" service for more information on requesting an access token. Once the API has made a call to the access token service, 
+        an access token and refresh token will be returned to the third party API for persistance. Upon successfully storing the tokens, the API will need to send back a success HTML page.  
+
+        ### Sample Request
+
+            curl --request GET \
+              --user-agent ""
+              --url https://{redirect_uri}?code={code}&scope={scope} \
+      parameters:
+        - name: redirect_uri
+          in: url
+          description: >
+            The endpoint address of the third party API which is provided to Macquarie during the onboarding process.
+          type: string
+        - name: code
+          in: query
+          description: >
+            The authorization code generated by Macquarie once a user has deletegated authority for a third party to access their accounts on their behalf. The authorization code is
+            needed to request an access token and refresh token.
+          required: true
+          type: string
+        - name: scope
+          in: query
+          description: >
+            Determines the amount of access provided to an access token.
+          required: true
+          type: string
+      tags:
+        - Authentication
+      responses:
+        default:
+          description:
+            The third party API should return a HTML page with either a success or failure message.
+  /oauth2/token:
+    post:
+      summary: Get An Access Token
+      description: >
+        Once the user has delegated authority for a third party application to access their Macquarie accounts on their behalf, the third party application will receive 
+        an authorization code which is to be used in exchange for an access token and refresh token. Upon successfully obtaining the tokens, the third party application
+        can use their access token and refresh token to access that users Macquarie accounts without the need for them to continually provide their user credentials.
+        The refresh token allows for a new access token to be generated once the existing access token has expired, without requiring the user to log in again.
+
+        ### Sample Request - Access Token
+
+            curl --request POST \
+              --user-agent ""
+              --url https://lab.api.macquarie.io/connect/v1/oauth2/token \
+              --header "client_id: {client_id}" \
+              --header "client_secret: {client_secret}" \
+              --header "content-type: application/x-www-form-urlencoded" \
+              --data "grant_type=authorization_code" \
+              --data "code={code}"
+
+        ### Sample Request - Refresh Token
+
+            curl --request POST \
+              --user-agent ""
+              --url https://lab.api.macquarie.io/connect/v1/oauth2/token \
+              --header "client_id: {client_id}" \
+              --header "client_secret: {client_secret}" \
+              --header "content-type: application/x-www-form-urlencoded" \
+              --data "grant_type=refresh_token" \
+              --data "refresh_token={refresh_token}"
+      parameters:
+        - name: content-type
+          in: header
+          description: >
+            The content-type of the request, which should be: application/x-www-form-urlencoded.
+          required: true
+          type: string
+          enum:
+            - application/x-www-form-urlencoded
+        - name: client_id
+          in: header
+          description: >
+            The Client ID of the third party application, which will be provided as part of the onboarding process.
+          required: true
+          type: string
+        - name: client_secret
+          in: header
+          description: >
+            The Client Secret of the third party application, which will be provided as part of the onboarding process.
+          required: true
+          type: string
+        - name: grant_type
+          in: formData
+          description: >
+            Should be authorization_code when requesting first access token after the user has delegated the third party application access to their accounts.
+            <br />
+            <br />
+            Should be refresh_token when refreshing an existing access token that has expired.
+          required: true
+          enum:
+            - authorization_code
+            - refresh_token
+          type: string
+        - name: code
+          in: formData
+          description: >
+            The authorization code received by the third party application upon a user granting access to their Macquarie accounts. The authorization code is 
+            only required on the first access token request for that user. The authorization code will be located in the request query parameter named "code". 
+            This authorization code will need to be extracted out and used to obtain the initial access token and refresh token.
+          required: false
+          type: string
+        - name: refresh_token
+          in: formData
+          description: >
+            The refresh token issued with the initial access token. Required only when refreshing an existing access token that has expired.
+          required: false
+          type: string
+      tags:
+        - Authentication
+      responses:
+        200:
+          schema:
+            $ref: "#/definitions/AccessTokenResponse"
+          examples:
+              access_token: xxx
+              token_type: Bearer
+              expires_in: 299
+              scope: xxx
+              refresh_token: xxx
+              refresh_token_expires_in: 2591999
+        default:
+          description: >
+            Errors will follow the same format as set out earlier in the document.
+            Errors will consist of the [Shared HTTP Error Codes](#shared-http-error-codes) and the following ones:
+
+              |HTTP Code|Code         |Description                                                                      |
+              |---------|-------------|---------------------------------------------------------------------------------|
+              |400      |bad_request  |Content-Type needs to be application/x-www-form-urlencoded.                      |
+              |400      |invalid_grant|The provided grant is invalid.                                                   |
+              |401      |unauthorized |Invalid authorization code, expired or has been revoked.                         |
+              |401      |unauthorized |Invalid refresh token.                                                           |
+              |401      |unauthorized |Not authorized to access accounts.                                               |
+          schema:
+            $ref: "#/definitions/ErrorsListResponse"
+          examples:
+              errors:
+                status: 400
+                code: bad_request
+                description: Either the requested URL is invalid or a mandatory parameter is missing from the request.
+  /accounts:
+    get:
+      summary: Get List Of Accounts
+      description: >
+        Allows for the retrieval of account details.
+
+        ### Sample Request
+
+            curl --request GET \
+              --user-agent ""
+              --url https://lab.api.macquarie.io/connect/v1/accounts \
+              --header "authorization: Bearer {access_token}" \
+              --header "client_id: {client_id}" \
+              --header "client_secret: {client_secret}"
+      parameters:
+        - name: authorization
+          in: header
+          default: Bearer {access_token}
+          description: >
+            Should contain the Bearer token returned from the initial access token request or from a refresh token request in the following format: Bearer {access_token}.
+          required: true
+          type: string
+        - name: client_id
+          in: header
+          description: >
+            The Client ID of the third party application, which will be provided as part of the onboarding process.
+          required: true
+          type: string
+        - name: client_secret
+          in: header
+          description: >
+            The Client Secret of the third party application, which will be provided as part of the onboarding process.
+          required: true
+          type: string
+      tags:
+        - Accounts
+      responses:
+        200:
+          schema:
+            $ref: "#/definitions/AccountsListResponse"
+          examples:
+              accounts:
+                -
+                  account_id: xxx
+                  account_nickname: xxx
+                  account_number: xxx
+                  product_category: xxx
+                  product_name: xxx
+                -
+                  account_id: xxx
+                  account_nickname: xxx
+                  account_number: xxx
+                  product_category: xxx
+                  product_name: xxx
+                -
+                  account_id: xxx
+                  account_nickname: xxx
+                  account_number: xxx
+                  product_category: xxx
+                  product_name: xxx
+        default:
+          description: >
+            Errors will follow the same format as set out earlier in the document.
+            Errors will consist of the [Shared HTTP Error Codes](#shared-http-error-codes) and the following ones:
+
+              |HTTP Code|Code        |Description                                                |
+              |---------|------------|-----------------------------------------------------------|
+              |404      |not_found   |No accounts found.                                         |
+          schema:
+            $ref: "#/definitions/ErrorsListResponse"
+          examples:
+              errors:
+                status: 400
+                code: bad_request
+                description: Either the requested URL is invalid or a mandatory parameter is missing from the request.
+  /balances/{account_id}:
+    get:
+      summary: Get List Of Account Balances
+      description: >
+        Allows for the retrieval of account balances. Depending on the type of account, the response schema may slightly vary. The example contains an array of possible schemas that 
+        may be returned.
+
+        ### Sample Request
+
+            curl --request GET \
+              --user-agent ""
+              --url https://lab.api.macquarie.io/connect/v1/balances/{account_id} \
+              --header "authorization: Bearer {access_token}" \
+              --header "client_id: {client_id}" \
+              --header "client_secret: {client_secret}"
+      parameters:
+        - name: authorization
+          in: header
+          default: Bearer {access_token}
+          description: >
+            Should contain the Bearer token returned from the initial access token request or from a refresh token request in the following format: Bearer {access_token}.
+          required: true
+          type: string
+        - name: client_id
+          in: header
+          description: >
+            The Client ID of the third party application, which will be provided as part of the onboarding process.
+          required: true
+          type: string
+        - name: client_secret
+          in: header
+          description: >
+            The Client Secret of the third party application, which will be provided as part of the onboarding process.
+          required: true
+          type: string
+        - name: account_id
+          in: path
+          description: >
+            The account id that identifies the account balances should be returned for.
+          required: true
+          type: string
+      tags:
+        - Balances
+      responses:
+        200:
+          schema:
+            $ref: "#/definitions/BalancesListResponse"
+          examples:
+              - balances:
+                  balance: 0.00
+                  available_funds: 0.00
+                  credit_limit: 0.00
+              - balances:
+                  balance: 0.00
+                  available_funds: 0.00
+                  uncleared_funds: 0.00
+              - balances:
+                  balance: 0.00
+                  arrears: 0.00
+                  available_redraw: 0.00
+                  uncleared_funds: 0.00
+                  loan_balance: 0.00
+                  limit: 0.00
+              - balances:
+                  balance: 0.00
+                  available_funds: 0.00
+        default:
+          description: >
+            Errors will follow the same format as set out earlier in the document.
+            Errors will consist of the [Shared HTTP Error Codes](#shared-http-error-codes) and the following ones:
+
+              |HTTP Code|Code        |Description                                                |
+              |---------|------------|-----------------------------------------------------------|
+              |400      |bad_request |The provided account number is invalid.                    |
+              |404      |not_found   |No balances found.                                         |
+          schema:
+            $ref: "#/definitions/ErrorsListResponse"
+          examples:
+              errors:
+                status: 400
+                code: bad_request
+                description: Either the requested URL is invalid or a mandatory parameter is missing from the request.
+  /transactions/{account_id}:
+    get:
+      summary: Get List Of Account Transactions
+      description: >
+        Allows for the retrieval of account transactions.
+
+        ### Sample Request
+
+            curl --request GET \
+              --user-agent ""
+              --url https://lab.api.macquarie.io/connect/v1/transactions/{account_id} \
+              --header "authorization: Bearer {access_token}" \
+              --header "client_id: {client_id}" \
+              --header "client_secret: {client_secret}"
+      parameters:
+        - name: authorization
+          in: header
+          default: Bearer {access_token}
+          description: >
+            Should contain the Bearer token returned from the initial access token request or from a refresh token request in the following format: Bearer {access_token}.
+          required: true
+          type: string
+        - name: client_id
+          in: header
+          description: >
+            The Client ID of the third party application, which will be provided as part of the onboarding process.
+          required: true
+          type: string
+        - name: client_secret
+          in: header
+          description: >
+            The Client Secret of the third party application, which will be provided as part of the onboarding process.
+          required: true
+          type: string
+        - name: account_id
+          in: path
+          description: >
+            The account id that identifies the account transactions should be returned for.
+          required: true
+          type: string
+        - name: limit
+          in: query
+          description: >
+            Sets the number of transaction records to be returned as part of the response. If a limit isn't specified, 10 transaction records will be returned by default.
+          required: false
+          default: 10
+          type: integer
+      tags:
+        - Transactions
+      responses:
+        200:
+          schema:
+            $ref: "#/definitions/TransactionsListResponse"
+          examples:
+              transactions:
+                -
+                  id: xxx
+                  amount: 0.00
+                  description: xxx
+                  type: xxx
+                  creation_date: xxxx-xx-xx
+                  value_date: xxxx-xx-xx
+                -
+                  id: xxx
+                  amount: 0.00
+                  description: xxx
+                  type: xxx
+                  creation_date: xxxx-xx-xx
+                  value_date: xxxx-xx-xx
+                -
+                  id: xxx
+                  amount: 0.00
+                  description: xxx
+                  type: xxx
+                  creation_date: xxxx-xx-xx
+                  value_date: xxxx-xx-xx
+        default:
+          description: >
+            Errors will follow the same format as set out earlier in the document.
+            Errors will consist of the [Shared HTTP Error Codes](#shared-http-error-codes) and the following ones:
+
+              |HTTP Code|Code        |Description                                                |
+              |---------|------------|-----------------------------------------------------------|
+              |400      |bad_request |The provided account number is invalid.                    |
+              |404      |not_found   |No transactions found.                                     |
+          schema:
+            $ref: "#/definitions/ErrorsListResponse"
+          examples:
+              errors:
+                status: 400
+                code: bad_request
+                description: Either the requested URL is invalid or a mandatory parameter is missing from the request.
+definitions:
+  AccessTokenResponse:
+    type: object
+    required:
+      - access_token
+      - token_type
+      - expires_in
+      - scope
+      - refresh_token
+      - refresh_token_expires_in
+    properties:
+      access_token:
+        type: string
+        description: >
+          Allows access to APIs without the need to pass around user credentials.
+      token_type:
+        type: string
+        description: >
+          Reflects the type of token, which will be Bearer.
+      expires_in:
+        type: number
+        description: >
+          Determines the time left in seconds until the access token expires.
+      scope:
+        type: string
+        description: >
+          Used to limit the amount of access provided to an access token.
+      refresh_token:
+        type: string
+        description: >
+          Allows for a new access token to be generated once the existing access token has expired, without requiring the user to log in again.
+      refresh_token_expires_in:
+        type: string
+        description: >
+          Determines the time left in seconds until the refresh token expires.
+  AccountsListResponse:
+    type: object
+    required:
+      - accounts
+    properties:
+      accounts:
+        type: array
+        items:
+          $ref: "#/definitions/Account"
+  Account:
+    type: object
+    required:
+      - account_id
+      - account_nickname
+      - account_number
+      - product_category
+      - product_name
+    properties:
+      account_id:
+        type: string
+        format: uuid
+        description: >
+          The unique account id that identifies the account, which is to be used in other requests where account id is a required parameter.
+      account_nickname:
+        type: string
+        description: >
+          The nickname of the account set by the user.
+      account_number:
+        type: string
+        description: >
+          Defines the BSB and account number or credit card number for the account.
+      product_category:
+        type: string
+        description: >
+          Defines the product type of the account.
+        enum:
+          - transaction
+          - savings
+          - credit_card
+          - mortgage
+      product_name:
+        type: string
+        description: >
+          Defines the product name of the account.
+  BalancesListResponse:
+    type: object
+    required: 
+      - balances
+    properties:
+      balances:
+        $ref: "#/definitions/Balance"
+  Balance:
+    type: object
+    required:
+      - balance
+    properties:
+      balance:
+        type: number
+        description: >
+          Sum of money currently present in the account.
+      available_funds:
+        type: number
+        description: >
+          Sum of money that is currently available for use in the account.
+      uncleared_funds:
+        type: number
+        description: >
+          Sum of money which has not yet cleared.
+      credit_limit:
+        type: number
+        description: >
+          Total credit limit available for the account.
+      arrears:
+        type: number
+        description: >
+          Current sum of money in arrears.
+      available_redraw:
+        type: number
+        description: >
+          Total amount available for account redraws.
+      loan_balance:
+        type: number
+        description: >
+          Loan balance of the account.
+      limit:
+        type: number
+        description: >
+          Total limit available in the account.
+  TransactionsListResponse:
+    type: object
+    required:
+      - transactions
+    properties:
+      transactions:
+        type: array
+        items:
+          $ref: "#/definitions/Transaction"
+  Transaction:
+    type: object
+    required:
+      - id
+      - amount
+      - description
+      - type
+      - creation_date
+      - value_date
+    properties:
+      id:
+        type: string
+        description: >
+          The transaction id.
+      amount:
+        type: number
+        description: >
+          Amount involved in the transaction.
+      description:
+        type: string
+        description: >
+          Transfer subject expressed in short text.
+      type:
+        type: string
+        description: >
+          Transaction type.
+      creation_date:
+        type: string
+        format: date
+        description: >
+          Transaction creation date and time.
+      value_date:
+        type: string
+        format: date
+        description: >
+          Date the transaction was effective.
+  ErrorsListResponse:
+    type: object
+    required:
+      - errors
+    properties:
+      errors:
+        type: array
+        items:
+          $ref: "#/definitions/Error"
+  Error:
+    type: object
+    required:
+      - status
+      - code
+      - description
+    properties:
+      status:
+        type: integer
+        description: >
+          HTTP response code.
+      code:
+        type: string
+        description: >
+          Machine-readable error code.
+      description:
+        type: string
+        description: >
+          Human-readable error message.
